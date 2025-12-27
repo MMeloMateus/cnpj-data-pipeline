@@ -1,0 +1,13 @@
+## Arquivos que não vão subir para a Imagem
+# Arquivos gerados pelo Airflow
+airflow/logs
+airflow/tmp
+airflow/*.db
+airflow/webserver.pid
+
+__pycache__/
+*.pyc
+
+# Arquivos Git
+.git/
+.gitignore
