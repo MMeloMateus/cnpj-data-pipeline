@@ -4,7 +4,7 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Workdir para organização da BUILD
-WORKDIR /opt/project
+# WORKDIR /opt/project Não é preciso para a instalçaõ, todos os comando já estão com comando absolutos
 
 COPY airflow/requirements.txt /opt/project/requirements.txt
 
@@ -17,12 +17,12 @@ RUN apt-get update \
 
 # Cópiar os códigos da aplicação
 COPY airflow /opt/project/airflow
-COPY dbt /opt/project/dbt
 
 ENV AIRFLOW_HOME=/opt/project/airflow
 ENV PYTHONPATH=/opt/project/airflow
 
-# Workdir para aplicação
+# Workdir para aplicação, o Real arquvio pipeline_dag.py está em airflow>dags
 WORKDIR /opt/project/airflow
 
-CMD ["airflow", "standalone"]
+#CMD ["airflow", "standalone"]
+CMD ["airflow", "webserver", "--port", "8080", "--host", "0.0.0.0"]

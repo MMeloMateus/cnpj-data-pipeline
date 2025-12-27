@@ -1,10 +1,8 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
 from datetime import datetime
-from airflow.utils.dates import days_ago
 
-from src.extract.downloader import download_files_for_period
+from src.extract.downloader import download_files_for_range  # função atualizada
 
 default_args = {
     "owner": "data-eng",
@@ -12,28 +10,16 @@ default_args = {
 }
 
 with DAG(
-    dag_id="download_pipeline_monthly",
-    start_date=datetime(2023, 1, 1),
-    schedule_interval="@monthly",
-    catchup=True,  # permite backfill quando quiser processar range
+    dag_id="download_pipeline_manual",
+    start_date=datetime(2025, 1, 1),  # obrigatório no Airflow
+    schedule_interval=None,           # nenhuma execução automática no momento (teste)
+    catchup=False,
     default_args=default_args,
     max_active_runs=1,
 ) as dag:
 
     download = PythonOperator(
         task_id="download",
-        python_callable=download_files_for_period,
-        provide_context=True,
+        python_callable=download_files_for_range,  # função que usa param opcionais
+        provide_context=True,  # Para acessar param
     )
-
-    dbt_run = BashOperator(
-        task_id="dbt_run",
-        bash_command="cd /opt/project/dbt && dbt run --profiles-dir ."
-    )
-
-    dbt_test = BashOperator(
-        task_id="dbt_test",
-        bash_command="cd /opt/project/dbt && dbt test --profiles-dir ."
-    )
-
-    download >> dbt_run >> dbt_test
