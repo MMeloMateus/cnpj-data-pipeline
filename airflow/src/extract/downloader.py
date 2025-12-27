@@ -86,7 +86,7 @@ def download_files_for_period(**context):
 
 def download_files_for_range(start_date, end_date):
     """
-    Baixa arquivos para todos os meses entre start_date e end_date.
+    Download files for all months between start_date and end_date.
     """
     current = start_date.start_of("month")
     end = end_date.start_of("month")
