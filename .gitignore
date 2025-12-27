@@ -17,5 +17,5 @@ data/bronze/2024-01/Estabelecimentos4.zip
 data/bronze/2024-01/Estabelecimentos5.zip
 data/bronze/2024-01/Estabelecimentos6.zip
 data/bronze/2024-01/Estabelecimentos7.zip
-downloader/.ipynb_checkpoints/Teste_Scritp-checkpoint.ipynb
-downloader/Teste_Scritp.ipynb
+airflow/src/extract/.ipynb_checkpoints/Teste_Scritp-checkpoint.ipynb
+airflow/src/extract/Teste_Scritp.ipynb
