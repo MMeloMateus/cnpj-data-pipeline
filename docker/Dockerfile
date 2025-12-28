@@ -1,12 +1,8 @@
 FROM python:3.11-slim
 
-# Evitar prompts interativos e reduzir tamanho
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Workdir para organização da BUILD
-# WORKDIR /opt/project Não é preciso para a instalçaõ, todos os comando já estão com comando absolutos
-
-COPY airflow/requirements.txt /opt/project/requirements.txt
+COPY requirements.txt /opt/project/requirements.txt
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends gcc libpq-dev build-essential \
@@ -15,14 +11,24 @@ RUN apt-get update \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 
-# Cópiar os códigos da aplicação
 COPY airflow /opt/project/airflow
 
-ENV AIRFLOW_HOME=/opt/project/airflow
+# Criação das Var Ambiente
+ENV AIRFLOW_HOME=/opt/airflow_home
+ENV AIRFLOW__CORE__DAGS_FOLDER=/opt/project/airflow/dags
 ENV PYTHONPATH=/opt/project/airflow
+ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 
-# Workdir para aplicação, o Real arquvio pipeline_dag.py está em airflow>dags
 WORKDIR /opt/project/airflow
 
-#CMD ["airflow", "standalone"]
-CMD ["airflow", "webserver", "--port", "8080", "--host", "0.0.0.0"]
+# Inicializar banco e criar usuário admin
+RUN airflow db init \
+  && airflow users create \
+     --username admin \
+     --firstname Admin \
+     --lastname User \
+     --role Admin \
+     --email admin@example.com \
+     --password admin
+
+CMD ["airflow", "standalone"]

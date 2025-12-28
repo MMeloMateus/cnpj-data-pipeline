@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   airflow:
     build:
@@ -14,3 +12,5 @@ services:
       - ./data:/opt/project/data
       - ./airflow:/opt/project/airflow
     restart: unless-stopped
+    mem_limit: 10g
+    mem_reservation: 6g
