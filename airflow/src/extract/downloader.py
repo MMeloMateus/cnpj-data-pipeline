@@ -2,7 +2,6 @@
 import os
 import sys
 import logging
-from pathlib import Path
 from urllib.parse import urljoin
 from dotenv import load_dotenv
 import requests
@@ -20,7 +19,8 @@ handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(handler)
 
-def download_files(url_file: str, path_destiny: str):
+
+def download_files(url_file: str, path_destiny: str, **context):
     """
     Download all .zip files from a given URL into path_destiny.
     """
@@ -60,18 +60,19 @@ def download_files(url_file: str, path_destiny: str):
         logger.exception("Failed to perform base HTML request: %s", url_file)
         raise
 
-def download_files_for_period(**context):
+
+def download_files_for_period(forced_date=None, **context):
     """
     Airflow PythonOperator callable.
-    Uses data_interval_start from the context to decide year/month.
+    Uses forced_date if provided, otherwise takes data_interval_start from the context.
     """
     data_dir_bronze = os.getenv("DATA_DIR_BRONZE", "/opt/project/data/bronze")
     base_url = os.getenv("RFB_BASE_URL")
     if not base_url:
         raise RuntimeError("RFB_BASE_URL not set in environment")
 
-    # data_interval_start is a pendulum datetime
-    di_start = context.get("data_interval_start") or context.get("execution_date")
+    # usa forced_date se passado, senão pega do contexto
+    di_start = forced_date or context.get("data_interval_start") or context.get("execution_date")
     if di_start is None:
         raise RuntimeError("No execution date found in context")
 
@@ -82,16 +83,19 @@ def download_files_for_period(**context):
     url = urljoin(base_url.rstrip("/") + "/", f"{year}-{month:02d}/")
 
     logger.info("Downloading period year=%s month=%s to %s from %s", year, month, local_path, url)
-    download_files(url, local_path)
+    download_files(url, local_path, **context)
 
-def download_files_for_range(start_date, end_date):
+
+def download_files_for_range(start_date, end_date, **context):
     """
     Download files for all months between start_date and end_date.
+    start_date and end_date devem ser objetos pendulum.DateTime
     """
     current = start_date.start_of("month")
     end = end_date.start_of("month")
 
     while current <= end:
-        logger.info("Processando mês: %s-%02d", current.year, current.month)
-        download_files_for_period(data_interval_start=current)
+        logger.info("Processing month: %s-%02d", current.year, current.month)
+        # Passando forced_date para evitar conflito com o context
+        download_files_for_period(forced_date=current, **context)
         current = current.add(months=1)
