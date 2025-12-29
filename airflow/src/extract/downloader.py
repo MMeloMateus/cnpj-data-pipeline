@@ -81,7 +81,7 @@ def download_files(url_file: str, path_destiny: str, **context):
 
                 with open(tmp_path, "wb") as f:
                     for chunk in r.iter_content(
-                        chunk_size=1024 * 1024  #
+                        chunk_size=1024 * 1024
                     ):
                         if chunk:
                             f.write(chunk)

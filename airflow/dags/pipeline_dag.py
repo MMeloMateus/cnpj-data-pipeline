@@ -23,8 +23,8 @@ with DAG(
         task_id="download",
         python_callable=download_files_for_range,
         op_kwargs={
-            "start_date": pendulum.datetime(2023, 10, 1),
-            "end_date": pendulum.datetime(2023, 12, 1)
+            "start_date": pendulum.datetime(2023, 2, 1),
+            "end_date": pendulum.datetime(2023, 4, 1)
         },
         provide_context=True,
     )
