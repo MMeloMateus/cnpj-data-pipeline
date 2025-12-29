@@ -1,8 +1,8 @@
 import os
 import sys
 import logging
-from urllib.parse import urljoin
 from dotenv import load_dotenv
+from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 import pendulum
@@ -20,7 +20,6 @@ handler.setFormatter(formatter)
 
 if not logger.handlers:
     logger.addHandler(handler)
-
 
 def is_zip_valid(path: str) -> bool:
     try:
@@ -112,8 +111,8 @@ def download_files_for_period(forced_date=None, **context):
     Airflow PythonOperator callable.
     Uses forced_date if provided, otherwise takes data_interval_start from context.
     """
-    data_dir_bronze = os.getenv(
-        "DATA_DIR_BRONZE", "/opt/project/data/bronze"
+    data_dir_raw = os.getenv(
+        "DATA_DIR_RAW", "/opt/project/data/raw"
     )
 
     base_url = os.getenv("RFB_BASE_URL")
@@ -132,7 +131,7 @@ def download_files_for_period(forced_date=None, **context):
     year = di_start.year
     month = di_start.month
 
-    local_path = os.path.join(data_dir_bronze, f"{year}-{month:02d}")
+    local_path = os.path.join(data_dir_raw, f"{year}-{month:02d}")
     url = urljoin(base_url.rstrip("/") + "/", f"{year}-{month:02d}/")
 
     logger.info(

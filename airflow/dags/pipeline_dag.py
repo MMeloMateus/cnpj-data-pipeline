@@ -3,7 +3,8 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pendulum
 
-from src.extract.downloader import download_files_for_range  # função atualizada
+from src.extract.downloader import download_files_for_range
+from src.extract.uncompress import uncompress_zip_file_range
 
 default_args = {
     "owner": "data-eng",
@@ -12,8 +13,8 @@ default_args = {
 
 with DAG(
     dag_id="download_pipeline_manual",
-    start_date=datetime(2025, 1, 1),  # obrigatório pelo Airflow
-    schedule_interval=None,           # nenhuma execução automática
+    start_date=datetime(2025, 1, 1),
+    schedule_interval=None,
     catchup=False,
     default_args=default_args,
     max_active_runs=1,
@@ -24,7 +25,19 @@ with DAG(
         python_callable=download_files_for_range,
         op_kwargs={
             "start_date": pendulum.datetime(2023, 2, 1),
-            "end_date": pendulum.datetime(2023, 4, 1)
+            "end_date": pendulum.datetime(2023, 4, 1),
         },
-        provide_context=True,
     )
+
+    uncompress = PythonOperator(
+        task_id="uncompress_zip_range",
+        python_callable=uncompress_zip_file_range,
+        op_kwargs={
+            "origin_base_path": "/opt/project/data/raw",
+            "output_dir": "/opt/project/data/bronze",
+            "start_date": "2023-02",
+            "end_date": "2023-04",
+        },
+    )
+
+    download >> uncompress
