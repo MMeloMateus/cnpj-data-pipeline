@@ -3,6 +3,3 @@ requests
 beautifulsoup4
 python-dotenv
 pendulum
-pathlib
-zipfile
-dotenv
