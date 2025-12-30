@@ -21,4 +21,4 @@ WORKDIR /opt/project/airflow
 EXPOSE 8080
 
 # Entrypoint padrão
-ENTRYPOINT ["bash", "-c"]
+ENTRYPOINT ["airflow", "standalone"]
