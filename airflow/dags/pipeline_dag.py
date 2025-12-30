@@ -4,7 +4,7 @@ from datetime import datetime
 import pendulum
 
 from src.extract.downloader import download_files_for_range
-from src.extract.uncompress import uncompress_zip_file_range
+from src.extract.decrompress import uncompress_zip_file_range
 
 default_args = {
     "owner": "data-eng",
