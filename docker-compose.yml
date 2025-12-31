@@ -1,16 +1,16 @@
 services:
   airflow:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    build: .
     container_name: cnpj-data-pipeline
     ports:
       - "8081:8080"
     env_file:
       - .env
     volumes:
-      - ./data:/opt/project/data
       - ./airflow:/opt/project/airflow
-    restart: unless-stopped
-    mem_limit: 10g
-    mem_reservation: 6g
+      - ./data:/opt/project/data
+      - ./warehouse:/opt/project/warehouse
+    command: >
+      bash -c "
+      airflow standalone
+      "

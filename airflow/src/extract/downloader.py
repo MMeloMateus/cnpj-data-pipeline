@@ -1,14 +1,14 @@
 import os
 import sys
 import logging
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 import pendulum
 import zipfile
 
-load_dotenv(verbose=False)
+# load_dotenv(verbose=False)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

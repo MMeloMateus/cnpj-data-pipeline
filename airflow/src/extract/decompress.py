@@ -4,11 +4,11 @@ import sys
 from pathlib import Path
 from zipfile import ZipFile
 import logging
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-load_dotenv(verbose=False)
+# load_dotenv(verbose=False)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -23,7 +23,7 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
-def check_path(path: str,  **context) -> None:
+def check_path(path: str) -> None:
     """
     Check if the path exists and is a directory.
     """
@@ -94,18 +94,33 @@ def uncompress_zip_file_range(
     end = datetime.strptime(end_date, "%Y-%m")
     current = start
 
+    processed_months = 0
     while current <= end:
-        # Pasta no formato YYYY-MM
-        month_path = Path(origin_base_path) / f"{current.year}-{current.month:02d}"
+        # Pasta de origem no formato YYYY-MM
+        origin_month_path = Path(origin_base_path) / f"{current.year}-{current.month:02d}"
 
-        logger.info("Processing month folder: %s", month_path)
+        # Pasta de destino no formato YYYY-MM
+        output_month_path = Path(output_dir) / f"{current.year}-{current.month:02d}"
+
+        logger.info(
+            "Processing month %s",
+            current.strftime("%Y-%m")
+        )
 
         try:
             uncompress_zip_file(
-                origin_path=str(month_path),
-                output_dir=output_dir,
+                origin_path=str(origin_month_path),
+                output_dir=str(output_month_path),
             )
+            processed_months += 1
+
         except FileNotFoundError:
-            logger.warning("No files found for %s", month_path)
+            logger.warning(
+                "No files found for %s",
+                current.strftime("%Y-%m")
+            )
 
         current += relativedelta(months=1)
+
+    if processed_months == 0:
+        raise RuntimeWarning("No zip files were processed in the given date range")

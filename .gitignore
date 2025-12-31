@@ -1,5 +1,5 @@
 data/bronze/
-data/bronze
+data/eaw
 airflow/src/extract/.ipynb_checkpoints/Teste_Scritp-checkpoint.ipynb
 airflow/src/extract/Teste_Scritp.ipynb
 .idea
