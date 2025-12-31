@@ -87,21 +87,18 @@ def uncompress_zip_file_range(
 ) -> None:
     """
     Uncompress zip files month by month within a date range.
+    Supports folders in the format YYYY-MM.
     """
 
     start = datetime.strptime(start_date, "%Y-%m")
     end = datetime.strptime(end_date, "%Y-%m")
-
     current = start
 
     while current <= end:
-        month_path = Path(origin_base_path) / f"{current.year}/{current.month:02d}"
+        # Pasta no formato YYYY-MM
+        month_path = Path(origin_base_path) / f"{current.year}-{current.month:02d}"
 
-        logger.info(
-            "Processing month: %s-%02d",
-            current.year,
-            current.month,
-        )
+        logger.info("Processing month folder: %s", month_path)
 
         try:
             uncompress_zip_file(

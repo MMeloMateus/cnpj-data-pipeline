@@ -24,8 +24,8 @@ with DAG(
         task_id="download",
         python_callable=download_files_for_range,
         op_kwargs={
-            "start_date": pendulum.datetime(2023, 2, 1),
-            "end_date": pendulum.datetime(2023, 4, 1),
+            "start_date": pendulum.datetime(2025, 1, 1),
+            "end_date": pendulum.datetime(2025, 3, 1),
         },
     )
 
@@ -35,8 +35,8 @@ with DAG(
         op_kwargs={
             "origin_base_path": "/opt/project/data/raw",
             "output_dir": "/opt/project/data/bronze",
-            "start_date": "2023-02",
-            "end_date": "2023-04",
+            "start_date": "2025-01",
+            "end_date": "2025-03",
         },
     )
 
