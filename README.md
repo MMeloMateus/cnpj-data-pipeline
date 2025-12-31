@@ -6,9 +6,9 @@ A arquitetura segue uma abordagem **ETL/ELT em camadas (Raw → Bronze → Silve
 
 ---
 
-**EN**: This project implements a data pipeline using Apache Airflow to orchestrate the collection, processing, and storage of public CNPJ data provided by the Brazilian Federal Revenue Service.
+**EN**: This project implements a **data pipeline** using **Apache Airflow** to orchestrate the collection, processing, and storage of public CNPJ **data provided by the Brazilian Federal Revenue Service.**
 
-The architecture follows a layered ETL/ELT approach (Raw → Bronze → Silver → Gold), enabling organized, traceable, and scalable pipelines.
+The architecture follows a layered **ETL/ELT approach (Raw → Bronze → Silver → Gold)**, enabling organized, traceable, and scalable pipelines.
 
 ---
 
@@ -40,11 +40,10 @@ cnpj-data-pipeline/
 ├── warehouse/
 ├── data/
 │   ├── raw/
-│   │   └── ano_mes/
 │   ├── bronze/
-│   │   └── ano_mes/
+│   │   ├── csv/
+│   │   └── parquet/
 │   ├── silver/
-│   │   └── ano_mes/
 │   └── gold/
 │
 └── airflow/
@@ -137,7 +136,7 @@ A pasta `data/` segue o padrão de **arquitetura em camadas**
 
 ### `bronze/`
 
-**PT:** Contém arquivos descompactados, mantendo o formato original, base para transformações futuras.
+**PT:** Contém arquivos descompactados, seja em csv ou partquet, mantendo o formato original, base para transformações futuras.
 **EN:** Contains decompressed files, maintaining the original format, serving as the base for further transformations.
 
 ---
@@ -158,7 +157,7 @@ A pasta `data/` segue o padrão de **arquitetura em camadas**
 
 ---
 
-## `warehouse/` (TODO) 
+### `warehouse/` (TODO) 
 
 **PT:** Armazenamento analítico local (ex.: DuckDB), otimizado para consultas e análises.
 
@@ -166,18 +165,11 @@ A pasta `data/` segue o padrão de **arquitetura em camadas**
 
 ---
 
-## Airflow (`airflow/`)
+### Airflow (`airflow/`)
 
-### `dags/`
+#### `dags/`
 
-**PT:** Contém as DAGs do Airflow. Ex.: pipeline_dag.py define fluxo principal de download, descompressão e organização por período.
-
-**EN:** Contains Airflow DAGs. Ex.: pipeline_dag.py defines the main pipeline flow: download, decompression, and organization by period
-
-#### `pipeline_dag.py`
-
-
-**PT: Define o fluxo principal:**
+**PT: Define o fluxo principal em csv:**
 * Download dos dados da Receita Federal
 * Descompactação dos arquivos
 * Organização por período
@@ -186,6 +178,39 @@ A pasta `data/` segue o padrão de **arquitetura em camadas**
 * Download data from the Receita Federal
 * Decompress files
 * Organize by period
+---
+**PT**: Contém as DAGs do Airflow. Ex.: pipeline_dag.py define o fluxo principal de download, descompressão e organização por período.
+
+**EN****: Contains Airflow DAGs. Ex.: pipeline_dag.py defines the main pipeline flow: download, decompression, and organization by period.
+
+##### `pipeline_csv_dag.py`
+
+**PT: Define o fluxo principal em CSV:**
+* Download dos dados da Receita Federal
+* Descompactação dos arquivos
+* Organização por período
+
+**EN: Defines the main pipeline flow in CSV:**
+* Download data from Receita Federal
+* Decompress files
+* Organize by period
+
+##### `pipeline_parquet_dag.py`
+
+**PT: Define o fluxo principal em Parquet:**
+* Download dos dados da Receita Federal
+* Descompactação dos arquivos
+* Conversão para Parquet
+* Organização por período
+
+**EN: Defines the main pipeline flow in Parquet:**
+
+* Download data from Receita Federal
+* Decompress files
+* Convert to Parquet
+* Organize by period
+
+---
 
 ### `logs/`
 **PT: Logs de execução das DAGs e tasks do Airflow.**\
@@ -215,7 +240,7 @@ A pasta `data/` segue o padrão de **arquitetura em camadas**
 * Integrations with dbt
 * Business rules and modeling
 
-#### `load/`
+### `load/`
 
 **PT: Camada responsável por carregar dados processados no warehouse.**\
 **EN: Layer responsible for loading processed data into the warehouse.**
@@ -224,11 +249,8 @@ Claro! Aqui está a seção formatada corretamente em **Markdown**, mantendo o p
 
 ## Acesso ao Airflow (Modo Desenvolvimento) / Airflow Access (Development Mode)
 
-**PT:** Este projeto utiliza o modo `airflow standalone` para facilitar o desenvolvimento local.  
-**EN:** This project uses `airflow standalone` to simplify local development.
-
-**PT:** Ao subir o ambiente com Docker, o Airflow cria automaticamente um usuário administrador (`admin`) com uma **senha gerada dinamicamente**, exibida nos logs do container.  
-**EN:** When starting the Docker environment, Airflow automatically creates an admin user (`admin`) with a **dynamically generated password**, displayed in the container logs.
+**PT:** Este projeto utiliza o modo `airflow standalone` para facilitar o desenvolvimento local. Ao subir o ambiente com Docker, o Airflow cria automaticamente um usuário administrador (`admin`) com uma **senha gerada dinamicamente**, exibida nos logs do container.  
+**EN:** This project uses `airflow standalone` to simplify local development. When starting the Docker environment, Airflow automatically creates an admin user (`admin`) with a **dynamically generated password**, displayed in the container logs.
 
 ### Obter a senha gerada automaticamente / Retrieve the auto-generated password
 
@@ -240,16 +262,9 @@ docker logs cnpj-data-pipeline
 # password: <generated-password>
 ````
 
-### (Opcional) Redefinir a senha do usuário admin / (Optional) Reset admin user password
+### (Optional) Redefinir a senha do usuário admin / Reset admin user password
 
 **PT:** Para facilitar o acesso em ambiente de desenvolvimento, é possível redefinir manualmente a senha do usuário administrador executando:
-
-```bash
-docker exec -it cnpj-data-pipeline bash
-
-airflow users reset-password --username admin --password admin
-```
-
 **EN:** For easier access in a development environment, you can manually reset the admin user password by running:
 
 ```bash

@@ -2,9 +2,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pendulum
-
 from src.extract.downloader import download_files_for_range
-from src.extract.decompress import uncompress_zip_file_range
+from src.extract.decompress import unzip_zip_to_parquet_range
 
 default_args = {
     "owner": "data-eng",
@@ -12,7 +11,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="download_pipeline_manual",
+    dag_id="pipeline_parquet_dag",
     start_date=datetime(2025, 1, 1),
     schedule_interval=None,
     catchup=False,
@@ -25,19 +24,19 @@ with DAG(
         python_callable=download_files_for_range,
         op_kwargs={
             "start_date": pendulum.datetime(2025, 1, 1),
-            "end_date": pendulum.datetime(2025, 3, 1),
+            "end_date": pendulum.datetime(2025, 2, 1),
         },
     )
 
-    uncompress = PythonOperator(
-        task_id="uncompress_zip_range",
-        python_callable=uncompress_zip_file_range,
+    uncompress_parquet = PythonOperator(
+        task_id="unzip_zip_to_parquet_range",
+        python_callable=unzip_zip_to_parquet_range,
         op_kwargs={
             "origin_base_path": "/opt/project/data/raw",
-            "output_dir": "/opt/project/data/bronze",
+            "output_dir": "/opt/project/data/bronze/parquet",
             "start_date": "2025-01",
-            "end_date": "2025-03",
+            "end_date": "2025-02",
         },
     )
 
-    download >> uncompress
+    download >> uncompress_parquet

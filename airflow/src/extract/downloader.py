@@ -7,8 +7,10 @@ import requests
 from bs4 import BeautifulSoup
 import pendulum
 import zipfile
+import shutil
+import pandas as pd
+import pyarrow
 
-# load_dotenv(verbose=False)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -52,12 +54,10 @@ def download_files(url_file: str, path_destiny: str, **context):
     for archive in archive_names:
         local_path = os.path.join(path_destiny, archive)
 
-        # Se já existe e é válido, pula
         if os.path.exists(local_path) and is_zip_valid(local_path):
             logger.info("File already exists and is valid: %s", archive)
             continue
 
-        # Se existe mas é inválido, remove
         if os.path.exists(local_path):
             logger.warning("Removing corrupted file: %s", archive)
             os.remove(local_path)
@@ -71,20 +71,16 @@ def download_files(url_file: str, path_destiny: str, **context):
             with requests.get(
                 file_url,
                 stream=True,
-                timeout=(10, 900)  # connect, read
+                timeout=(10, 900)
             ) as r:
                 r.raise_for_status()
 
                 expected_size = int(r.headers.get("Content-Length", 0))
-                downloaded = 0
 
                 with open(tmp_path, "wb") as f:
-                    for chunk in r.iter_content(
-                        chunk_size=1024 * 1024
-                    ):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
+                    shutil.copyfileobj(r.raw, f)
+
+                downloaded = os.path.getsize(tmp_path)
 
                 if expected_size and downloaded != expected_size:
                     raise IOError(
@@ -99,11 +95,11 @@ def download_files(url_file: str, path_destiny: str, **context):
 
             logger.info("Download completed successfully: %s", archive)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to download file: %s", archive)
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
-            raise e  # deixa o Airflow retryar
+            raise
 
 
 def download_files_for_period(forced_date=None, **context):

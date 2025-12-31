@@ -4,11 +4,12 @@ import sys
 from pathlib import Path
 from zipfile import ZipFile
 import logging
-# from dotenv import load_dotenv
+import shutil
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import pandas as pd
+import pyarrow
 
-# load_dotenv(verbose=False)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -61,7 +62,6 @@ def list_archives(path: str,  **context) -> list[Path]:
 def uncompress_zip_file(origin_path: str, output_dir: str, **context) -> None:
     """
     Extract all .zip files from the source directory into the output directory.
-    Corrupted ZIP files are skipped.
     """
     output_dir = Path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -71,8 +71,32 @@ def uncompress_zip_file(origin_path: str, output_dir: str, **context) -> None:
     for file in zip_files:
         try:
             logger.info("Extracting zip file: %s", file)
+
             with ZipFile(file, "r") as zip_obj:
-                zip_obj.extractall(path=output_dir)
+                for member in zip_obj.infolist():
+
+                    name = Path(member.filename).name
+                    target_path = output_dir / name
+
+                    if member.is_dir():
+                        if target_path.exists():
+                            logger.info(
+                                "Skipping directory. Already exists: %s",
+                                target_path
+                            )
+                        else:
+                            target_path.mkdir()
+                        continue
+
+                    if target_path.exists():
+                        logger.info(
+                            "Skipping extraction. File already exists: %s",
+                            target_path
+                        )
+                        continue
+
+                    with zip_obj.open(member) as source, open(target_path, "wb") as target:
+                        shutil.copyfileobj(source, target)
 
         except zipfile.BadZipFile:
             logger.exception("Corrupted ZIP file skipped: %s", file)
@@ -96,10 +120,8 @@ def uncompress_zip_file_range(
 
     processed_months = 0
     while current <= end:
-        # Pasta de origem no formato YYYY-MM
         origin_month_path = Path(origin_base_path) / f"{current.year}-{current.month:02d}"
 
-        # Pasta de destino no formato YYYY-MM
         output_month_path = Path(output_dir) / f"{current.year}-{current.month:02d}"
 
         logger.info(
@@ -111,6 +133,113 @@ def uncompress_zip_file_range(
             uncompress_zip_file(
                 origin_path=str(origin_month_path),
                 output_dir=str(output_month_path),
+            )
+            processed_months += 1
+
+        except FileNotFoundError:
+            logger.warning(
+                "No files found for %s",
+                current.strftime("%Y-%m")
+            )
+
+        current += relativedelta(months=1)
+
+    if processed_months == 0:
+        raise RuntimeWarning("No zip files were processed in the given date range")
+
+
+def unzip_zip_to_parquet(origin_path: str, output_dir: str, sep=";", **context) -> None:
+    """
+    Convert all .zip files from the source directory into parquet files.
+    """
+
+    output_dir = Path(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
+    zip_files = list_archives(origin_path)
+
+    for file in zip_files:
+        try:
+            logger.info("Processing zip file: %s", file)
+
+            with ZipFile(file, "r") as zip_obj:
+                for member in zip_obj.infolist():
+
+                    if member.is_dir():
+                        continue
+
+                    name = Path(member.filename).name
+
+                    if not name.lower().endswith((".csv", ".txt")):
+                        continue
+
+                    parquet_path = output_dir / f"{Path(name).stem}.parquet"
+
+                    if parquet_path.exists():
+                        logger.info(
+                            "Skipping parquet. Already exists: %s",
+                            parquet_path
+                        )
+                        continue
+
+                    logger.info(
+                        "Converting %s -> %s",
+                        name,
+                        parquet_path.name
+                    )
+
+                    with zip_obj.open(member) as f:
+                        df = pd.read_csv(
+                            f,
+                            sep=sep,
+                            dtype=str,
+                            low_memory=False
+                        )
+
+                    df.to_parquet(
+                        parquet_path,
+                        engine="pyarrow",
+                        compression="snappy",
+                        index=False
+                    )
+
+        except zipfile.BadZipFile:
+            logger.exception("Corrupted ZIP file skipped: %s", file)
+
+
+def unzip_zip_to_parquet_range(
+    origin_base_path: str,
+    output_dir: str,
+    start_date: str,
+    end_date: str,
+    sep=";",
+    **context,
+) -> None:
+    """
+    Convert zip files to parquet month by month within a date range.
+    Supports folders in the format YYYY-MM.
+    """
+
+    start = datetime.strptime(start_date, "%Y-%m")
+    end = datetime.strptime(end_date, "%Y-%m")
+    current = start
+
+    processed_months = 0
+
+    while current <= end:
+        origin_month_path = Path(origin_base_path) / f"{current.year}-{current.month:02d}"
+        output_month_path = Path(output_dir) / f"{current.year}-{current.month:02d}"
+
+        logger.info(
+            "Processing month %s",
+            current.strftime("%Y-%m")
+        )
+
+        try:
+            unzip_zip_to_parquet(
+                origin_path=str(origin_month_path),
+                output_dir=str(output_month_path),
+                sep=sep,
             )
             processed_months += 1
 
