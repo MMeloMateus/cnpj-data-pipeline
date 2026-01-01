@@ -1,4 +1,8 @@
-data/
+data/bronze/csv/*
+data/bronze/raw/*
+data/raw/*
+data/silver/*
+data/gold/*
 
 airflow/logs
 airflow/tmp
