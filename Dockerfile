@@ -2,13 +2,11 @@ FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Variáveis do Airflow
+# Airflow
 ENV AIRFLOW_HOME=/opt/project/airflow
 ENV AIRFLOW__CORE__DAGS_FOLDER=/opt/project/airflow/dags
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 ENV PYTHONPATH=/opt/project/airflow
-# ENV PYTHONPATH=/opt/project/airflow:/opt/project/airflow/plugins
-
 
 # Dependências
 COPY requirements.txt /requirements.txt
