@@ -1,0 +1,159 @@
+import os
+import sys
+import logging
+# from dotenv import load_dotenv
+from urllib.parse import urljoin
+import requests
+from bs4 import BeautifulSoup
+import pendulum
+import zipfile
+import shutil
+import pandas as pd
+import pyarrow
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+)
+handler.setFormatter(formatter)
+
+if not logger.handlers:
+    logger.addHandler(handler)
+
+def is_zip_valid(path: str) -> bool:
+    try:
+        with zipfile.ZipFile(path, "r") as z:
+            return z.testzip() is None
+    except Exception:
+        return False
+
+
+def download_files(url_file: str, path_destiny: str, **context):
+    """
+    Download all .zip files from a given URL into path_destiny.
+    Safe for large files (1GB+), Docker and Airflow retries.
+    """
+    os.makedirs(path_destiny, exist_ok=True)
+    logger.info("Starting HTML request: %s", url_file)
+
+    response_request = requests.get(url_file, timeout=30)
+    response_request.raise_for_status()
+
+    soup = BeautifulSoup(response_request.text, "html.parser")
+    archive_names = [
+        a["href"]
+        for a in soup.find_all("a")
+        if a.get("href", "").endswith(".zip")
+    ]
+
+    logger.info("Files found on page: %d", len(archive_names))
+
+    for archive in archive_names:
+        local_path = os.path.join(path_destiny, archive)
+
+        if os.path.exists(local_path) and is_zip_valid(local_path):
+            logger.info("File already exists and is valid: %s", archive)
+            continue
+
+        if os.path.exists(local_path):
+            logger.warning("Removing corrupted file: %s", archive)
+            os.remove(local_path)
+
+        file_url = urljoin(url_file, archive)
+        tmp_path = local_path + ".part"
+
+        logger.info("Downloading file: %s -> %s", file_url, local_path)
+
+        try:
+            with requests.get(
+                file_url,
+                stream=True,
+                timeout=(10, 900)
+            ) as r:
+                r.raise_for_status()
+
+                expected_size = int(r.headers.get("Content-Length", 0))
+
+                with open(tmp_path, "wb") as f:
+                    shutil.copyfileobj(r.raw, f)
+
+                downloaded = os.path.getsize(tmp_path)
+
+                if expected_size and downloaded != expected_size:
+                    raise IOError(
+                        f"Incomplete download for {archive}: "
+                        f"{downloaded} / {expected_size} bytes"
+                    )
+
+            os.rename(tmp_path, local_path)
+
+            if not is_zip_valid(local_path):
+                raise IOError(f"ZIP corrupted after download: {archive}")
+
+            logger.info("Download completed successfully: %s", archive)
+
+        except Exception:
+            logger.exception("Failed to download file: %s", archive)
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
+
+
+def download_files_for_period(forced_date=None, **context):
+    """
+    Airflow PythonOperator callable.
+    Uses forced_date if provided, otherwise takes data_interval_start from context.
+    """
+    data_dir_raw = os.getenv(
+        "DATA_DIR_RAW", "/opt/project/data/raw"
+    )
+
+    base_url = os.getenv("RFB_BASE_URL")
+    if not base_url:
+        raise RuntimeError("RFB_BASE_URL not set in environment")
+
+    di_start = (
+        forced_date
+        or context.get("data_interval_start")
+        or context.get("execution_date")
+    )
+
+    if di_start is None:
+        raise RuntimeError("No execution date found in context")
+
+    year = di_start.year
+    month = di_start.month
+
+    local_path = os.path.join(data_dir_raw, f"{year}-{month:02d}")
+    url = urljoin(base_url.rstrip("/") + "/", f"{year}-{month:02d}/")
+
+    logger.info(
+        "Downloading period year=%s month=%s to %s from %s",
+        year,
+        month,
+        local_path,
+        url,
+    )
+
+    download_files(url, local_path, **context)
+
+
+def download_files_for_range(start_date, end_date, **context):
+    """
+    Download files for all months between start_date and end_date.
+    start_date and end_date must be pendulum.DateTime
+    """
+    current = start_date.start_of("month")
+    end = end_date.start_of("month")
+
+    while current <= end:
+        logger.info(
+            "Processing month: %s-%02d",
+            current.year,
+            current.month,
+        )
+        download_files_for_period(forced_date=current, **context)
+        current = current.add(months=1)
